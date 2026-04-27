@@ -1,4 +1,9 @@
 // src/services/aiService.js
+import { enforceRaceAndTaperRules } from '../utils/planNormalizer';
+import { getStartDateAnchoredToRace, calculatePlanLengthFromGoal, assignDatesToPlan } from '../utils/planScheduler';
+
+
+
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -12,6 +17,13 @@ const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 export const generateAIRunningPlan = async (runnerProfile, currentPaces, targetPaces, planLength) => {
   // Access the key from your .env file (Vite uses VITE_ prefix)
   const apiKey = import.meta.env.VITE_OPENAI_KEY;
+  const goalDateISO = runnerProfile.goalDate;
+
+  const startDate = getStartDateAnchoredToRace(goalDateISO, planLength); // or however you compute it
+  const raceDate = new Date(goalDateISO);
+  raceDate.setHours(0,0,0,0);
+  const totalDays = Math.round((raceDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
 
   if (!apiKey) {
     throw new Error("OpenAI API Key is missing. Check your .env file and restart the dev server.");
@@ -76,6 +88,8 @@ CRITICAL COACHING RULES:
 11. OUTPUT FORMAT:
    Respond ONLY with valid JSON. No conversational text before or after.
    Return 7 entries per week and ensure chronological continuity.
+   Return exactly ${totalDays} entries, one for each day, in chronological order, starting on ${startDate.toISOString().slice(0,10)} and ending on ${goalDateISO}.
+
 
 12. WARM UP AND COOL DOWN:
    - For every workout day, specify explicit warm-up and cool-down mileage (e.g., "2 miles warm-up, 2 miles cool-down") in the day's description
@@ -104,7 +118,11 @@ JSON SCHEMA (strictly follow this structure):
   "goalTime": string
 }`;
 
-const userPrompt = `Generate a ${planLength}-week training plan for ${runnerProfile.name}, a ${runnerProfile.event} specialist.
+const userPrompt = `
+Generate a training plan that starts on ${startDate.toISOString().slice(0,10)} and ends on ${goalDateISO}.
+The plan must have exactly ${totalDays} days, with a unique, meaningful entry for every day (no missing days, no extra days).
+Each day should include: dayOfWeek, type, and description.
+DO NOT combine days or skip days. DO NOT include any extra or missing days.
 
 ATHLETE PROFILE:
 - Target Event: ${runnerProfile.event}
@@ -151,6 +169,16 @@ SPECIFIC REQUIREMENTS:
 - Integrate weight training: ${runnerProfile.weightRoutine || 'No lifting specified'}
 - DO NOT HAVE ANY RACE DATE BEFORE THE USER'S SELECTED DATE.
 - DO NOT LET MILEAGE EXCEED 70 MILES PER WEEK.
+- Do not include any 'Race' or 'Taper' weeks before the final two weeks.
+- If you include a 'Race' day before the end, that is an error.
+- Only the last day should be labeled as “Race.”
+- Scan all plan days: If any day before the last day is labeled as “Race,” change it to a “Workout,” “Rest,” or “Recovery” day with an appropriate description.
+- Explicitly set the day before the race (the day before the last day) to a “Shakeout” or “Easy Run (3-4 miles)” day, regardless of what the AI initially generates for that day."
+- Force the last plan day’s date to match the user’s inputted race date.
+- Generate something for each day up to the race date (rest days count as something). Do not leave any gaps in the schedule.
+- If you do not return exactly ${totalDays} days, your output will be rejected and you will be asked again.
+
+
 
 Return the complete ${planLength}-week plan in the JSON format specified in your system instructions. Include all ${planLength} weeks with 7 days each (or ${runnerProfile.daysPerWeek} training days + rest days).`;
 
@@ -180,13 +208,19 @@ Return the complete ${planLength}-week plan in the JSON format specified in your
 
     const data = await response.json();
     const planData = JSON.parse(data.choices[0].message.content);
-    
+
     // Basic validation
     if (!planData.weeks || !Array.isArray(planData.weeks)) {
       throw new Error('Invalid plan structure returned from AI');
     }
 
-    return planData;
+    // Post-process to enforce race/taper rules
+    const cleanedPlan = enforceRaceAndTaperRules(
+      planData,
+      runnerProfile.goalDate // or whatever variable holds the user's goal race date
+    );
+
+    return cleanedPlan;
 
   } catch (error) {
     console.error("AI Service Error:", error);

@@ -8,107 +8,102 @@
  * - Guarantee a Race day exactly on the goal date
  */
 
-export function calculatePlanLengthFromGoal(goalDateISO, minWeeks = 4, maxWeeks = 20) {
-  const today = startOfDay(new Date());
-  const race = startOfDay(new Date(goalDateISO));
-  const diffDays = Math.max(0, Math.ceil((race - today) / (1000 * 60 * 60 * 24)));
+export function calculatePlanLengthFromGoal(goalDateISO, minWeeks = 4, maxWeeks = 52) {
+  const today = new Date();
+  const race = new Date(goalDateISO);
+  today.setHours(0,0,0,0);
+  race.setHours(0,0,0,0);
+
+  const diffDays = Math.round((race - today) / (1000 * 60 * 60 * 24));
   const weeks = Math.ceil(diffDays / 7);
-  return Math.min(Math.max(weeks, minWeeks), maxWeeks);
+  return Math.max(weeks, minWeeks);
 }
 
 export function getStartDateAnchoredToRace(goalDateISO, planLengthWeeks) {
-  // Always anchor so the last day is the race date, regardless of weekday
-  const start = addDays(new Date(goalDateISO), -((planLengthWeeks * 7) - 1));
-  return startOfDay(start);
+  const raceDate = new Date(goalDateISO);
+  raceDate.setHours(0,0,0,0);
+  const start = new Date(raceDate);
+  start.setDate(start.getDate() - ((planLengthWeeks * 7) - 1));
+  // Adjust start date to the previous Monday
+  const dayOfWeek = start.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const diffToMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+  start.setDate(start.getDate() - diffToMonday);
+  return start;
 }
 
-export function assignDatesToPlan(plan, startDateISO, goalDateISO, longRunDay = 'Saturday', eventLabel = '') {
-  const start = startOfDay(new Date(startDateISO));
-  const goal = startOfDay(new Date(goalDateISO));
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  // Flatten to assign dates linearly (week i, day j => offset i*7 + j)
-  const flattened = [];
-  plan.weeks.forEach((w, wi) => {
-    const days = (w.days || []).slice(0, 7);
-    while (days.length < 7) {
-      days.push({
-        dayOfWeek: 'Rest',
-        type: 'Rest',
-        description: 'Rest day'
-      });
-    }
-    days.forEach((d, di) => {
-      const offset = wi * 7 + di;
-      const date = addDays(start, offset);
-      flattened.push({ weekIndex: wi, dayIndex: di, date, day: d });
+export function assignDatesToPlan(plan, startDateISO, goalDateISO) {
+  const startDate = new Date(startDateISO);
+  startDate.setHours(0,0,0,0);
+  const raceDate = new Date(goalDateISO);
+  raceDate.setHours(0,0,0,0);
+
+  // Calculate total days between start and race (inclusive)
+  const totalDays = Math.round((raceDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+  // Flatten all plan days into a single array
+  let flatDays = [];
+  plan.weeks.forEach(week => {
+    if (!Array.isArray(week.days)) week.days = [];
+    flatDays = flatDays.concat(week.days);
+  });
+
+  // Patch: pad or trim to match totalDays
+  while (flatDays.length < totalDays) {
+    flatDays.splice(flatDays.length - 1, 0, {
+      type: 'Rest',
+      description: 'Rest day (auto-added to align plan with calendar)'
     });
-  });
+  }
+  if (flatDays.length > totalDays) {
+    flatDays.splice(totalDays - 1, flatDays.length - totalDays);
+  }
 
-  // Overwrite the entry for the goal date to always be Race day
-  flattened.forEach(f => {
-    if (isSameDay(f.date, goal)) {
-      f.day = {
-        dayOfWeek: dayOfWeekName(goal),
-        type: 'Race',
-        description: `🏆 RACE DAY — ${eventLabel || plan.event || ''}`.trim()
-      };
+  // Assign dates and dayOfWeek
+  let currentDate = new Date(startDate);
+  for (let i = 0; i < flatDays.length; i++) {
+    flatDays[i].date = currentDate.toISOString();
+    flatDays[i].dayOfWeek = dayNames[currentDate.getDay()];
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Only the last day should be "Race"
+  for (let i = 0; i < flatDays.length - 1; i++) {
+    if (flatDays[i].type && flatDays[i].type.toLowerCase() === 'race') {
+      flatDays[i].type = 'Recovery';
+      flatDays[i].description = 'Easy recovery day (auto-corrected from misplaced Race day)';
     }
-  });
+  }
+
+  // Ensure last day is race day and correct dayOfWeek
+  flatDays[flatDays.length - 1].date = raceDate.toISOString();
+  flatDays[flatDays.length - 1].dayOfWeek = dayNames[raceDate.getDay()];
+  flatDays[flatDays.length - 1].type = 'Race';
+  flatDays[flatDays.length - 1].description = '🏆 RACE DAY — Good luck!';
 
   // Ensure the day before race is a shakeout
-  const dayBeforeRace = addDays(goal, -1);
-  flattened.forEach(f => {
-    if (isSameDay(f.date, dayBeforeRace)) {
-      f.day = {
-        dayOfWeek: dayOfWeekName(dayBeforeRace),
-        type: 'Recovery',
-        description: '3-4 mile shakeout run, light strides, and drills. Hydrate and rest!'
-      };
-    }
-  });
+  if (flatDays.length > 1) {
+    const dayBefore = flatDays[flatDays.length - 2];
+    dayBefore.type = 'Recovery';
+    dayBefore.description = '3-4 mile shakeout run, light strides, and drills. Hydrate and rest!';
+  }
 
-  // Rebuild weeks with dates (respect existing phase assignments)
-  const weeksOut = plan.weeks.map((w, wi) => {
-    const startIdx = wi * 7;
-    const slice = flattened.slice(startIdx, startIdx + 7);
+  // Rebuild weeks (groups of 7)
+  const weeks = [];
+  for (let i = 0; i < flatDays.length; i += 7) {
+    weeks.push({
+      ...plan.weeks[Math.floor(i / 7)] || {},
+      days: flatDays.slice(i, i + 7)
+    });
+  }
 
-    const weekItems = slice.map(f => ({
-      ...f.day,
-      date: toISO(f.date),
-      dayOfWeek: f.day.dayOfWeek || dayOfWeekName(f.date)
-    }));
-
-    let phase = w.phase || 'Base';
-    let totalMileage = Number(w.totalMileage || 0);
-    let weightNotes = w.weightNotes;
-
-    // Only apply taper modifications if the phase is already "Taper"
-    if (phase === 'Taper') {
-      weightNotes = 'Keep lifting light; prioritize sleep and recovery';
-      for (let i = 0; i < weekItems.length; i++) {
-        const d = weekItems[i];
-        // Do not alter Race day
-        if (d.type === 'Workout' && !isSameDay(new Date(d.date), goal)) {
-          weekItems[i] = { ...d, description: simplifyForTaper(d.description) };
-        }
-      }
-    }
-
-    return {
-      ...w,
-      phase: phase,
-      totalMileage: totalMileage,
-      weightNotes: weightNotes,
-      days: weekItems
-    };
-  });
-
-  return { ...plan, weeks: weeksOut };
+  return { ...plan, weeks };
 }
 
 // ---------- Helpers ----------
 
-const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+//const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function dayOfWeekName(date) {
   return dayNames[date.getDay()];

@@ -13,54 +13,134 @@
   padding: 0;
 }
 
+/* --- Pace Table Card (container) --- */
 .pace-table-card {
   background: #f8f9fa;
-  border-radius: 10px;
-  padding: 24px;
-  margin: 24px 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  max-width: 400px;
-}
-
-.pace-table-grid {
+  border-radius: 14px;
+  padding: 32px 24px;
+  margin: 32px auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  max-width: 700px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.pace-table-row {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid #e0e0e0;
 }
 
-.pace-table-row:last-child {
-  border-bottom: none;
+/* --- New: Pace Card Grid --- */
+.pace-card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
 }
 
-.pace-table-label {
-  font-weight: 500;
-  color: #333;
+/* --- New: Individual Pace Card --- */
+.pace-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 22px 28px;
+  min-width: 140px;
+  min-height: 120px;
+  text-align: center;
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-left: 6px solid var(--jbu-blue);
+  position: relative;
 }
 
-.pace-table-value {
+.pace-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  transform: translateY(-4px) scale(1.03);
+}
+
+.pace-card.goalPace {
+  border-left-color: var(--workout-orange);
+  background: #fde9b5;
+}
+
+.pace-card.threshold {
+  border-left-color: var(--workout-orange);
+}
+
+.pace-card.interval {
+  border-left-color: #00b8d9;
+}
+
+.pace-card.repetition {
+  border-left-color: #e74c3c;
+}
+
+.pace-card.marathon {
+  border-left-color: var(--jbu-gold);
+}
+
+.pace-card.longRun {
+  border-left-color: var(--recovery-green);
+}
+
+.pace-card.easy {
+  border-left-color: #2ecc71;
+}
+
+.pace-card-icon {
+  font-size: 2.1rem;
+  margin-bottom: 8px;
+}
+
+.pace-card-label {
+  font-weight: 700;
+  color: var(--jbu-blue);
+  margin-bottom: 4px;
+  font-size: 1.08rem;
+}
+
+.pace-card-value {
+  font-size: 1.45rem;
+  color: var(--workout-orange);
   font-family: "Menlo", "Consolas", monospace;
-  font-size: 1.1em;
-  color: #003366;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.pace-card-notes {
+  color: #888;
+  font-size: 0.96em;
+  margin-top: 8px;
+  font-style: italic;
 }
 
 .pace-table-vdot {
-  margin-top: 14px;
+  margin-top: 18px;
   font-style: italic;
   color: #666;
+  font-size: 1.1rem;
 }
 
 .pace-table-notes {
-  margin-top: 8px;
+  margin-top: 10px;
   color: #888;
-  font-size: 0.96em;
+  font-size: 1em;
+}
+
+/* Responsive for mobile */
+@media (max-width: 700px) {
+  .pace-table-card {
+    padding: 18px 4vw;
+    max-width: 98vw;
+  }
+  .pace-card-grid {
+    gap: 14px;
+  }
+  .pace-card {
+    min-width: 120px;
+    padding: 16px 10px;
+  }
 }
 
 body {

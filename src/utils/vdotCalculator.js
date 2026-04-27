@@ -3,18 +3,30 @@
  * Uses Jack Daniels' VDOT formulas for accurate training paces.
  */
 
-import { get } from "express/lib/response";
+//import { get } from "express/lib/response";
 
 // Estimate 5k time from 1500m PR (conservative, matches VDOT calculator logic)
 function estimate5kFrom1500m(prSeconds) {
-  // 1500m to 5k: multiply by 3.5 (empirical, matches VDOT calculator)
-  return prSeconds * 3.5;
+  // 1500m to 5k: multiply by 3.73 (empirical, matches VDOT calculator)
+  return prSeconds * 3.73;
 }
 
 // Estimate 5k time from Mile PR
 function estimate5kFromMile(prSeconds) {
-  // Mile to 5k: multiply by 3.1 (empirical)
-  return prSeconds * 3.1;
+  // Mile to 5k: multiply by 3.47 (empirical)
+  return prSeconds * 3.47;
+}
+
+// Estimate 5k time from 800m PR
+function estimate5kFrom800m(prSeconds) {
+  // 800m to 5k: multiply by 7.72 (empirical)
+  return prSeconds * 7.72;
+}
+
+// Estimate 5k time from 3k PR
+function estimate5kFrom3k(prSeconds) {
+  // 3k to 5k: multiply by 1.74 (empirical)
+  return prSeconds * 1.74;
 }
 
 // Calculate threshold pace in seconds per mile
@@ -24,20 +36,26 @@ function getThresholdPace(event, prSeconds) {
   if (event === '1500m') {
     const est5kSec = estimate5kFrom1500m(prSeconds);
     const pace5k = est5kSec / 3.107; // seconds per mile
-    thresholdPaceSec = pace5k / 0.90; // threshold ≈ 97% of 5k pace
+    thresholdPaceSec = pace5k * 1.09; // threshold ≈ 97% of 5k pace
   } else if (event === 'Mile') {
     const est5kSec = estimate5kFromMile(prSeconds);
     const pace5k = est5kSec / 3.107;
-    thresholdPaceSec = pace5k / 0.90;
+    thresholdPaceSec = pace5k * 1.09;
   } else if (event === '800m') {
     // 800m to 5k: multiply by 6.8
-    const est5kSec = prSeconds * 6.8;
+    const est5kSec = estimate5kFrom800m(prSeconds);
     const pace5k = est5kSec / 3.107;
-    thresholdPaceSec = pace5k / 0.90;
-  } else if (event === '3k' || event === '5k' || event === '10k') {
-    // For 3k/5k/10k, threshold ≈ 97% of race pace
-    const pace = prSeconds / getEventDistance(event); // seconds per mile
-    thresholdPaceSec = pace / 0.90;
+    thresholdPaceSec = pace5k * 1.09;
+  } else if (event === '3k') {
+    // 3k to 5k: multiply by 1.74
+    const est5kSec = estimate5kFrom3k(prSeconds);
+    const pace5k = est5kSec / 3.107;
+    thresholdPaceSec = pace5k * 1.09;
+  // } else if (event === '5k' || event === '10k') {
+  //   // For 3k/5k/10k, threshold ≈ 97% of race pace
+  //   const est5kSec = estimate5kFrom3k(prSeconds);
+  //   const pace5k = est5kSec / 3.107;
+  //   thresholdPaceSec = pace5k * 1.09;
   } else {
     // For longer events, threshold ≈ 95% of race pace
     const pace = prSeconds / getEventDistance(event);
@@ -61,13 +79,14 @@ function getIntervalPace(event, prSeconds) {
     intervalPaceSec = pace5k;
   } else if (event === '800m') {
     // 800m to 5k: multiply by 6.8
-    const est5kSec = prSeconds * 6.8;
+    const est5kSec = estimate5kFrom800m(prSeconds);
     const pace5k = est5kSec / 3.107;
     intervalPaceSec = pace5k;
-  } else if (event === '3k' || event === '5k' || event === '10k') {
+  } else if (event === '3k') {
     // For 3k/5k/10k, interval ≈ 97% of race pace
-    const pace = prSeconds / getEventDistance(event); // seconds per mile
-    intervalPaceSec = pace;
+    const est5kSec = estimate5kFrom3k(prSeconds);
+    const pace5k = est5kSec / 3.107; // seconds per mile
+    intervalPaceSec = pace5k;
   } else {
     // For longer events, interval ≈ 95% of race pace
     const pace = prSeconds / getEventDistance(event);
@@ -83,24 +102,25 @@ function getRepeatPace(event, prSeconds) {
   if (event === '1500m') {
     const est5kSec = estimate5kFrom1500m(prSeconds);
     const pace5k = est5kSec / 3.107; // seconds per mile
-    repeatPaceSec = pace5k * 41.1; // interval ≈ 97% of 5k pace
+    repeatPaceSec = pace5k * 0.92; // interval ≈ 97% of 5k pace
   } else if (event === 'Mile') {
     const est5kSec = estimate5kFromMile(prSeconds);
     const pace5k = est5kSec / 3.107;
-    repeatPaceSec = pace5k * 1.1;
+    repeatPaceSec = pace5k * 0.92;
   } else if (event === '800m') {
     // 800m to 5k: multiply by 6.8
     const est5kSec = prSeconds * 6.8;
     const pace5k = est5kSec / 3.107;
-    repeatPaceSec = pace5k * 1.1;
-  } else if (event === '3k' || event === '5k' || event === '10k') {
-    // For 3k/5k/10k, interval ≈ 97% of race pace
-    const pace = prSeconds / getEventDistance(event); // seconds per mile
-    repeatPaceSec = pace * 1.1;
+    repeatPaceSec = pace5k * 0.92;
+  } else if (event === '3k') {
+    // For 3k, interval ≈ 97% of 5k pace
+    const est5kSec = estimate5kFrom3k(prSeconds);
+    const pace5k = est5kSec / 3.107;
+    repeatPaceSec = pace5k * 0.92;
   } else {
     // For longer events, interval ≈ 95% of race pace
     const pace = prSeconds / getEventDistance(event);
-    repeatPaceSec = pace * 1.1;
+    repeatPaceSec = pace * 0.95;
   }
   return repeatPaceSec / 60; // convert to minutes per mile
 }
@@ -112,24 +132,25 @@ function getMarathonPace(event, prSeconds) {
   if (event === '1500m') {
     const est5kSec = estimate5kFrom1500m(prSeconds);
     const pace5k = est5kSec / 3.107; // seconds per mile
-    marathonPaceSec = pace5k / 0.8; // marathon pace ≈ 80% of 5k pace
+    marathonPaceSec = pace5k * 1.14; // marathon pace ≈ 80% of 5k pace
   } else if (event === 'Mile') {
     const est5kSec = estimate5kFromMile(prSeconds);
     const pace5k = est5kSec / 3.107;
-    marathonPaceSec = pace5k / 0.8; // marathon pace ≈ 80% of 5k pace
+    marathonPaceSec = pace5k * 1.14; // marathon pace ≈ 80% of 5k pace
   } else if (event === '800m') {
     // 800m to 5k: multiply by 6.8
     const est5kSec = prSeconds * 6.8;
     const pace5k = est5kSec / 3.107;
-    marathonPaceSec = pace5k / 0.8; // marathon pace ≈ 80% of 5k pace
-  } else if (event === '3k' || event === '5k' || event === '10k') {
-    // For 3k/5k/10k, interval ≈ 97% of race pace
-    const pace = prSeconds / getEventDistance(event); // seconds per mile
-    marathonPaceSec = pace / 0.8; // marathon
+    marathonPaceSec = pace5k * 1.14; // marathon pace ≈ 80% of 5k pace
+  } else if (event === '3k') {
+    // For 3k, interval ≈ 97% of 5k pace
+    const est5kSec = estimate5kFrom3k(prSeconds);
+    const pace5k = est5kSec / 3.107;
+    marathonPaceSec = pace5k * 1.14; // marathon pace ≈ 80% of 5k pace
   } else {
     // For longer events, interval ≈ 95% of race pace
     const pace = prSeconds / getEventDistance(event);
-    marathonPaceSec = pace / 0.8; // marathon pace
+    marathonPaceSec = pace * 1.14; // marathon pace
   }
   return marathonPaceSec / 60; // convert to minutes per mile
 }

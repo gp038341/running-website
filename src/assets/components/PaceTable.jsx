@@ -1,16 +1,14 @@
 import React from "react";
 
-// List of paces to display, in order and with user-friendly labels
+// List of paces to display, in order and with user-friendly labels and icons
 const PACE_LABELS = [
-  { key: "easy", label: "Easy" },
-  { key: "longRun", label: "Long Run" },
-  { key: "steadyState", label: "Steady State" },
-  { key: "marathon", label: "Marathon Pace" },
-  { key: "threshold", label: "Threshold" },
-  { key: "cruiseInterval", label: "Cruise Interval" },
-  { key: "interval", label: "Interval" },
-  { key: "repetition", label: "Repetition" },
-  { key: "goalPace", label: "Goal Race Pace" }
+  { key: "easy", label: "Easy", icon: "🟢" },
+  { key: "longRun", label: "Long Run", icon: "🏃‍♂️" },
+  { key: "marathon", label: "Marathon Pace", icon: "🏅" },
+  { key: "threshold", label: "Threshold", icon: "⚡" },
+  { key: "interval", label: "Interval", icon: "⏱️" },
+  { key: "repetition", label: "Repetition", icon: "🔁" },
+  { key: "goalPace", label: "Goal Race Pace", icon: "🎯" }
 ];
 
 export default function PaceTable({ paces }) {
@@ -19,12 +17,13 @@ export default function PaceTable({ paces }) {
   return (
     <div className="pace-table-card">
       <h3 style={{ marginBottom: 12 }}>📊 Your Training Paces</h3>
-      <div className="pace-table-grid">
-        {PACE_LABELS.map(({ key, label }) =>
+      <div className="pace-card-grid">
+        {PACE_LABELS.map(({ key, label, icon }) =>
           paces[key] && paces[key] !== "N/A" ? (
-            <div className="pace-table-row" key={key}>
-              <span className="pace-table-label">{label}</span>
-              <span className="pace-table-value">{paces[key]}</span>
+            <div className={`pace-card ${key}`} key={key}>
+              <div className="pace-card-icon">{icon}</div>
+              <div className="pace-card-label">{label}</div>
+              <div className="pace-card-value">{paces[key]}</div>
             </div>
           ) : null
         )}

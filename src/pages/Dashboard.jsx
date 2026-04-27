@@ -7,6 +7,7 @@ import { calculatePlanLengthFromGoal, getStartDateAnchoredToRace, assignDatesToP
 import { generateAIRunningPlan } from '../services/aiService';
 import PaceTable from '../assets/components/PaceTable';
 
+
 function downloadPlanAsCSV(plan) {
   if (!plan || !plan.weeks) return;
   let csv = 'Week,Day,Date,Type,Description\n';
@@ -320,7 +321,7 @@ const Dashboard = () => {
               ← Previous Week
             </button>
             <span className="week-display">
-              Week {currentWeek + 1} of {plan.weeks.length} - {plan.weeks,[currentWeek].phase} Phase
+              Week {currentWeek + 1} of {plan.weeks.length} - {plan.weeks[currentWeek].phase} Phase
             </span>
             <button 
               onClick={() => setCurrentWeek(Math.min(plan.weeks.length - 1, currentWeek + 1))}
@@ -331,19 +332,19 @@ const Dashboard = () => {
           </div>
 
           <div className="week-details">
-            <h3>Week {plan.weeks,[currentWeek].weekNumber}</h3>
-            <p className="phase-badge">{plan.weeks,[currentWeek].phase}</p>
+            <h3>Week {plan.weeks[currentWeek].weekNumber}</h3>
+            <p className="phase-badge">{plan.weeks[currentWeek].phase}</p>
             <p className="mileage-target">
-              Target Mileage: {plan.weeks,[currentWeek].totalMileage} miles
+              Target Mileage: {plan.weeks[currentWeek].totalMileage} miles
             </p>
-            {plan.weeks,[currentWeek].weightNotes && (
+            {plan.weeks[currentWeek].weightNotes && (
               <p className="weight-notes">
-                💪 Strength: {plan.weeks,[currentWeek].weightNotes}
+                💪 Strength: {plan.weeks[currentWeek].weightNotes}
               </p>
             )}
 
             <div className="days-grid">
-              {plan.weeks,[currentWeek].days.map((day, idx) => (
+              {plan.weeks[currentWeek].days.map((day, idx) => (
                 <div key={idx} className={`day-card ${day.type.toLowerCase()}`}>
                   <div className="day-header">
                     <span className="day-name">{day.dayOfWeek} • {new Date(day.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
