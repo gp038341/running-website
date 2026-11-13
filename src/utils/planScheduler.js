@@ -10,7 +10,7 @@
 
 export function calculatePlanLengthFromGoal(goalDateISO, minWeeks = 4, maxWeeks = 52) {
   const today = new Date();
-  const race = new Date(goalDateISO);
+  const race = new Date(goalDateISO + 'T00:00:00');
   today.setHours(0,0,0,0);
   race.setHours(0,0,0,0);
 
@@ -20,7 +20,7 @@ export function calculatePlanLengthFromGoal(goalDateISO, minWeeks = 4, maxWeeks 
 }
 
 export function getStartDateAnchoredToRace(goalDateISO, planLengthWeeks) {
-  const raceDate = new Date(goalDateISO);
+  const raceDate = new Date(goalDateISO + 'T00:00:00');
   raceDate.setHours(0,0,0,0);
   const start = new Date(raceDate);
   start.setDate(start.getDate() - ((planLengthWeeks * 7) - 1));
@@ -36,7 +36,7 @@ const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 export function assignDatesToPlan(plan, startDateISO, goalDateISO) {
   const startDate = new Date(startDateISO);
   startDate.setHours(0,0,0,0);
-  const raceDate = new Date(goalDateISO);
+  const raceDate = new Date(goalDateISO + 'T00:00:00');
   raceDate.setHours(0,0,0,0);
 
   // Calculate total days between start and race (inclusive)

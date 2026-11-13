@@ -34,7 +34,7 @@ const Dashboard = () => {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
-    event: '3k',
+    event: '5k',
     currentPR: '',
     goalTime: '',
     weeklyMileage: '',
@@ -127,7 +127,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>🏃‍♂️ JBU AI Running Coach</h1>
+        <h1>🏃‍♂️ StrideWise - AI Running Coach</h1>
       </header>
 
       {!plan ? (

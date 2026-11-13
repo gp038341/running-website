@@ -177,6 +177,10 @@ SPECIFIC REQUIREMENTS:
 - Force the last plan day’s date to match the user’s inputted race date.
 - Generate something for each day up to the race date (rest days count as something). Do not leave any gaps in the schedule.
 - If you do not return exactly ${totalDays} days, your output will be rejected and you will be asked again.
+- The plan should only have days running on the specified days per week, with complete rest days otherwise.
+- The total number of days that have mileage should not exceed ${runnerProfile.daysPerWeek} days per week.
+- Long run days should always be on ${runnerProfile.longRunDay}
+
 
 
 
@@ -190,7 +194,7 @@ Return the complete ${planLength}-week plan in the JSON format specified in your
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
